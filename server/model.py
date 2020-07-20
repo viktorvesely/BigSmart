@@ -136,6 +136,7 @@ class BigBrain:
     def meta_train(self):
         train_path, eval_path = self.utterances.generate_train_file(eval_ratio=1/5)
         self.model = fasttext.train_supervised(input=train_path, autotuneValidationFile=eval_path)
+        self.save()
 
     def load(self):
         models = self.get_models()

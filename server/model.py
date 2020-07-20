@@ -8,7 +8,6 @@ import unidecode
 
 from threading import Timer
 
-import data as Parse
 from utterances import Utterances
 
 TEXT = 0
@@ -16,12 +15,11 @@ INTENT = 1
 
 TRAIN_OFFSET = 4 # seconds
 DATA_PATH = "../data/models/"
-INPUT_PATH = "../data/fasttext/training.train"
 N_BACKUP = 10 # number of models to backup
 INDEX_LENGTH = 8
 
 LR = 1.0
-EPOCH = 400
+EPOCH = 2000
 
 def log(msg):
     print(msg, file=sys.stderr)
@@ -79,8 +77,8 @@ class BigBrain:
 
         self.ongoing_training = True
 
-        self.utterances.generate_train_file()
-        self.model = fasttext.train_supervised(input=INPUT_PATH, lr=LR, epoch=EPOCH)
+        train_path, _ = self.utterances.generate_train_file(eval_ratio=0)
+        self.model = fasttext.train_supervised(input=train_path, lr=LR, epoch=EPOCH)
 
         self.schedulued_training = False
         self.ongoing_training = False
@@ -119,6 +117,13 @@ class BigBrain:
         with open(self.path("meta.json"), 'w+', encoding="utf-8") as f:
             json.dump(meta, f)
     
+    def get_intents(self):
+        labels = self.model.get_labels()
+        intents = []
+        for label in labels:
+            intents.append(label_to_intent(label))
+        return intents
+
     def get_models(self):
         meta = self.load_metadata()
         return meta["models"]
@@ -127,6 +132,10 @@ class BigBrain:
         filename = "model-" + random_string(8) + ".bin"
         self.model.save_model(self.path(filename))
         self.push_model(filename)
+
+    def meta_train(self):
+        train_path, eval_path = self.utterances.generate_train_file(eval_ratio=1/5)
+        self.model = fasttext.train_supervised(input=train_path, autotuneValidationFile=eval_path)
 
     def load(self):
         models = self.get_models()
@@ -142,4 +151,6 @@ class BigBrain:
         if not self.schedulued_training:
             self.schedulue_training()
         return TRAIN_OFFSET
-            
+
+    def just_train(self):
+        self.meta_train()

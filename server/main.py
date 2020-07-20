@@ -28,3 +28,17 @@ def predict():
         "intent": intent,
         "confidence": confidence
     })
+
+@app.route("/train")
+def train():
+    brain.just_train()
+    return jsonify({
+        "msg": "Lets see the console"
+    })
+
+@app.route("/intents")
+def intents():
+    intents = brain.get_intents()
+    return jsonify({
+        "intents": intents
+    })

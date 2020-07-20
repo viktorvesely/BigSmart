@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import unidecode
 
+from utterances import Utterances
+
 
 PATH_TO_WIT = "../data/wit/"
 PATH_TO_DATA = "../data/fasttext/"
@@ -17,9 +19,9 @@ def process_string(string):
     return string
 
 def doc_to_train(doc):
-    text = process_string(doc[0])
-    intent = process_string(doc[1])
-    return "__label__" + str(intent).replace("_", "-") + " " + str(text)
+    utterance = doc[1]
+    intent = doc[0]
+    return "__label__" + str(intent).replace("_", "-") + " " + str(utterance)
 
 
 def split_data(data, counts, ratio):
@@ -32,12 +34,12 @@ def split_data(data, counts, ratio):
         valid_counts[key] = int(item * ratio)
     
     for row in data:
-        intent = row[1]
+        intent = row[0]
         if valid_counts[intent] > 0:
-            eval_data.append(data)
+            eval_data.append(row)
             valid_counts[intent] -= 1
         else:
-            train_data.append(data)
+            train_data.append(row)
 
     return (train_data, eval_data)
 
@@ -52,7 +54,24 @@ def proccess_row(row, docs, counts):
     counts[intent] += 1
     docs.append([intent, utterance])
 
-def df_to_docs(df):
+def process_to_doc(row, docs):
+    intent = row["intent"]
+    utterance = row["utterance"]
+
+    docs.append({
+        "intent": intent,
+        "utterance": utterance
+    })
+
+def df_to_doc(df):
+    """
+        Transforms pandas to doc(s): {intent:, uttterance:}
+    """
+    docs = []
+    df.apply(lambda row: process_to_doc(row, docs), axis=1)
+    return docs
+
+def df_to_train(df):
     """
         Transforms pandas to doc(s): [intent, uttterance]
         and also couunts the utterances per intent
@@ -69,7 +88,7 @@ def parse_excel(path_to_data, sheet_index, eval_ratio=1/5):
     df = pd.read_excel(path_to_data, sheet_name=sheet_index)
     # fills missing intents
     df["intent"] = df["intent"].fillna(method="ffill")
-    df = df.drop("téma")
+    df = df.drop("téma", axis=1)
 
     # melts data to two columns : [intent, utterance]
     df = pd.melt(df, id_vars="intent", value_name="utterance", var_name="drop")
@@ -86,9 +105,9 @@ def parse_excel(path_to_data, sheet_index, eval_ratio=1/5):
     df.replace('', np.nan, regex=True, inplace=True)
     df.dropna(subset=["utterance"], inplace=True)
 
-    docs, counts = df_to_docs(df)
-    train_data, eval_data = split_data(docs, counts, 1/5)
-    save_files(train_data, eval_data, suffix="excel")
+    docs = df_to_doc(df)
+    
+    Utterances().save_utterances(docs)
     
     
 def save_files(train_data, eval_data, suffix="data"):
@@ -97,6 +116,7 @@ def save_files(train_data, eval_data, suffix="data"):
     """
     train_name = "{}train_{}.train".format(PATH_TO_DATA, suffix)
     eval_name = "{}train_{}.valid".format(PATH_TO_DATA, suffix)
+    
     with open(train_name, 'w', encoding="utf-8") as f:
         for doc in train_data:
             line = doc_to_train(doc)
@@ -124,9 +144,10 @@ def parse_wit():
                 counts[intent] = 0
             
             counts[intent] += 1
-            all_data.append([text, intent])
+            all_data.append([intent, text])
 
     train_data, eval_data = split_data(all_data, counts, 1/5)
     save_files(train_data, eval_data, suffix="wit")
 
         
+parse_excel("../data/excels/version_1.xlsx", 3, eval_ratio=1/4)

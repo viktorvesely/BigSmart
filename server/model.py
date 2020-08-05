@@ -17,9 +17,25 @@ TRAIN_OFFSET = 4 # seconds
 DATA_PATH = "../data/models/"
 N_BACKUP = 10 # number of models to backup
 INDEX_LENGTH = 8
+MAX_MODEL_SIZE = 5 # in MB
 
-LR = 1.0
-EPOCH = 2000
+MODEL = {
+  "dim": 38,
+  "epoch": 500,
+  "lr": 0.09,
+  "lrUpdateRate": 100,
+  "maxn": 6,
+  "minCount": 1,
+  "minCountLabel": 0,
+  "minn": 3,
+  "neg": 5,
+  "t": 0.0001,
+  "wordNgrams": 1,
+  "ws": 5
+}
+
+EVAL_COUNT = 1
+
 
 def log(msg):
     print(msg, file=sys.stderr)
@@ -77,8 +93,12 @@ class BigBrain:
 
         self.ongoing_training = True
 
-        train_path, _ = self.utterances.generate_train_file(eval_ratio=0)
-        self.model = fasttext.train_supervised(input=train_path, lr=LR, epoch=EPOCH)
+        train_path, _ = self.utterances.generate_train_file(eval_count=0)
+        MODEL["input"] = train_path
+        MODEL["loss"] = "hs"
+        self.model = fasttext.train_supervised(
+                **MODEL
+            )
 
         self.schedulued_training = False
         self.ongoing_training = False
@@ -124,6 +144,42 @@ class BigBrain:
             intents.append(label_to_intent(label))
         return intents
 
+
+    def scoop_model_params(self):
+        train_parameters = [
+            'lr',
+            'dim',
+            'ws',
+            'epoch',
+            'minCount',
+            'minCountLabel',
+            'minn',
+            'maxn',
+            'neg',
+            'wordNgrams',
+            'bucket',
+            'lrUpdateRate',
+            't'
+        ]
+
+        args_getter = self.model.f.getArgs()
+
+        parameters = {}
+        for param in train_parameters:
+            attr = getattr(args_getter, param)
+            if param == 'loss':
+                attr = attr.name
+            parameters[param] = attr
+
+        return parameters
+
+    def print_prop(self):
+        model = self.model
+        f = model.f
+        args = f.getArgs()
+        keys2 = [a for a in dir(args) if not a.startswith('__')]
+        print(keys2)
+
     def get_models(self):
         meta = self.load_metadata()
         return meta["models"]
@@ -134,8 +190,8 @@ class BigBrain:
         self.push_model(filename)
 
     def meta_train(self):
-        train_path, eval_path = self.utterances.generate_train_file(eval_ratio=1/5)
-        self.model = fasttext.train_supervised(input=train_path, autotuneValidationFile=eval_path)
+        train_path, eval_path = self.utterances.generate_train_file(eval_count=EVAL_COUNT)
+        self.model = fasttext.train_supervised(input=train_path, autotuneValidationFile=eval_path, autotuneModelSize="{}M".format(MAX_MODEL_SIZE))
         self.save()
 
     def load(self):

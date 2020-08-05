@@ -9,7 +9,7 @@ EVAL = "training.valid"
 
 
 
-def split_data(data, ratio):
+def split_data(data, ratio, count):
     train_data = []
     eval_data = []
     
@@ -24,7 +24,10 @@ def split_data(data, ratio):
     
 
     for key, item in counts.items():
-        valid_counts[key] = int(item * ratio)
+        if ratio is None:
+            valid_counts[key] = 0 if count >= item else count
+        else:
+            valid_counts[key] = int(item * ratio)
     
     for utterance in data:
         intent = utterance["intent"]
@@ -72,12 +75,12 @@ class Utterances:
         intent = doc["intent"]
         return "__label__" + intent.replace("_", "-") + " " + utterance
 
-    def generate_train_file(self, eval_ratio=1/5):
+    def generate_train_file(self, eval_ratio=None, eval_count=None):
         if self.writing:
             return False
         self.writing = True
         all_utterances = self.get_all()
-        train_data, eval_data = split_data(all_utterances, eval_ratio)
+        train_data, eval_data = split_data(all_utterances, eval_ratio, eval_count)
         with open(OUTPUT_PATH + TRAIN, 'w+', encoding="utf-8") as f:
             for doc in train_data:
                 line = self.process_doc(doc)

@@ -1,15 +1,13 @@
 from flask import Flask
 from flask import request
 from flask import jsonify
+from flask_cors import CORS
 
 from model import BigBrain
 
 app = Flask("BigBrain")
+CORS(app, resources={r"/*": {"origins": "*"}})
 brain = BigBrain()
-
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
 
 @app.route("/utterance", methods=['POST'])
 def utterance():
@@ -28,6 +26,16 @@ def predict():
         "intent": intent,
         "confidence": confidence
     })
+
+@app.route("/debug")
+def debug_command():
+    brain.schedulue_training()
+    return jsonify({"ok": "ok"})
+
+@app.route("/scoop")
+def scoope():
+    params = brain.scoop_model_params()
+    return jsonify(params)
 
 @app.route("/train")
 def train():

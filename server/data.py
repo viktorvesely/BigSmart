@@ -81,7 +81,7 @@ def df_to_train(df):
     df.apply(lambda row: proccess_row(row, docs, counts), axis=1)
     return docs, counts
 
-def parse_excel(path_to_data, sheet_index, eval_ratio=1/5):
+def parse_excel(path_to_data, sheet_index):
     """
         Parses hand-made excel to trainign and validation files
     """
@@ -89,7 +89,8 @@ def parse_excel(path_to_data, sheet_index, eval_ratio=1/5):
     # fills missing intents
     df["intent"] = df["intent"].fillna(method="ffill")
     df = df.drop("téma", axis=1)
-
+    df = df.drop("podkategorie", axis=1)
+    
     # melts data to two columns : [intent, utterance]
     df = pd.melt(df, id_vars="intent", value_name="utterance", var_name="drop")
     df.drop("drop", axis=1, inplace=True)
@@ -101,6 +102,8 @@ def parse_excel(path_to_data, sheet_index, eval_ratio=1/5):
 
     df["utterance"] = df["utterance"].apply(unidecode.unidecode)
     df["intent"] = df["intent"].apply(unidecode.unidecode)
+    df["intent"] = df["intent"].str.replace(" ", "_", regex=False)
+    df["utterance"] = df["utterance"].str.replace("[^A-Za-z0-9 ]+", " ", regex=True)
 
     df.replace('', np.nan, regex=True, inplace=True)
     df.dropna(subset=["utterance"], inplace=True)
@@ -150,4 +153,4 @@ def parse_wit():
     save_files(train_data, eval_data, suffix="wit")
 
         
-parse_excel("../data/excels/version_1.xlsx", 3, eval_ratio=1/4)
+parse_excel("../data/excels/version_2.xlsx", 3)

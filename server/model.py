@@ -5,6 +5,8 @@ import random
 import sys
 import os
 import unidecode
+import re
+from enum import Enum
 
 from threading import Timer
 
@@ -18,6 +20,11 @@ DATA_PATH = "../data/models/"
 N_BACKUP = 10 # number of models to backup
 INDEX_LENGTH = 8
 MAX_MODEL_SIZE = 5 # in MB
+
+class TRAIN(Enum):
+    BAD_INTENT = -2
+    NO_TRAIN = -1
+    TRAIN_OK = 1
 
 MODEL = {
   "dim": 38,
@@ -201,13 +208,25 @@ class BigBrain:
         filename = self.get_models()[-1:][0]
         return fasttext.load_model(self.path(filename))
 
+
+    def check_intent(self, intent):
+        result = re.search(r"^[a-z0-9_]+$", intent)
+        return result is not None
+    
+
     def train(self, utterance):
         utterance["index"] = random_string(INDEX_LENGTH)
         utterance["utterance"] = self.process_utterance_text(utterance["utterance"])
+        print(utterance)
+        intent = utterance["intent"]
+        intent = intent.lower()
+        if not self.check_intent(intent):
+            return (TRAIN.BAD_INTENT, TRAIN.NO_TRAIN)
+        utterance["intent"] = intent
         self.utterances.save_utterance(utterance)
         if not self.schedulued_training:
             self.schedulue_training()
-        return TRAIN_OFFSET
+        return (TRAIN.TRAIN_OK, TRAIN_OFFSET)
 
     def just_train(self):
         self.meta_train()

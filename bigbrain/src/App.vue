@@ -1,6 +1,6 @@
 <template>
   <v-app>
-
+    <Alerts></Alerts>
     <v-main>
       <v-navigation-drawer app permanent expand-on-hover class="primary inline-block">
       <v-list nav>
@@ -28,6 +28,8 @@
 
 <script>
 
+import Alerts from "./components/Alerts.vue"
+
 export default {
   name: 'App',
   data: () => ({
@@ -54,5 +56,8 @@ export default {
       }
     ]
   }),
+  components: {
+    "Alerts": Alerts
+  }
 };
 </script>

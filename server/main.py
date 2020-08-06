@@ -4,6 +4,7 @@ from flask import jsonify
 from flask_cors import CORS
 
 from model import BigBrain
+from model import TRAIN as GYM 
 
 app = Flask("BigBrain")
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -12,9 +13,15 @@ brain = BigBrain()
 @app.route("/utterance", methods=['POST'])
 def utterance():
     utterance = request.json
-    delta = brain.train(utterance)
+    res, delta = brain.train(utterance)
+    error = False
+
+    if res == GYM.BAD_INTENT:
+        error = "Zlý formát intentu. Intent nemôže obsahovať medzery ani špeciálne znaky (okrem '_'), iba písmená a čísla."
+
     return jsonify({
-        "train_time": delta 
+        "train_time": delta,
+        "error": error 
     })
 
 @app.route("/predict", methods=["POST"])

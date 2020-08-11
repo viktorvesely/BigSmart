@@ -55,6 +55,6 @@ set FLASK_ENV=production
 python -m flask run
 ```
 
-## More info about the bigrain can be found on thw wiki-page
+## More info about the bigrain can be found on the wiki-page
 
 [Wiki page](https://github.com/viktorvesely/BigSmart/wiki)

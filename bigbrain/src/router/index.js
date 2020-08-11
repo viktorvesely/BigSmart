@@ -13,6 +13,11 @@ Vue.use(VueRouter)
     path: "/intents",
     name: 'Intents',
     component: () => import('../views/Intents.vue')
+  },
+  {
+    path: "/texts",
+    name: "User utterances",
+    component: () => import('../views/Validate.vue')
   }
 ]
 
